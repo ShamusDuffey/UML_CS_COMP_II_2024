@@ -2,7 +2,7 @@
 /**********************************************************************
 Program: River Ferry Logistics Management
 Author: Shamus Duffey
-Date: 4/4/2024
+Date: 8/24/2024
 Time spent: 2 weeks
 Purpose: This program provides tools using a queue data structure to read formatted input
 corresponding to the backlog of a river ferry's terminals and outputs the number of crossings necessary to accomodate
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
             while ((sumL + getFront(leftBank) < l) && getSize(leftBank))//This loop loads vehicles onto the ferry until the next one won't fit.
             {
                 sumL += getFront(leftBank);
-                queueService(leftBank);//problematic: program stalls, does not progress to further lines, and returns an undefined exit code
+                queueService(leftBank);
             }
             if ((sumR + getFront(rightBank) < l) && getSize(rightBank) > 0 || getSize(leftBank) > 0)
                 crossings++;
@@ -125,9 +125,10 @@ int main(int argc, char** argv)
         printf("%d\n", crossings);
         crossings = 0;
     }
-    //Destroying opaque objects-----------
+    //Destroying opaque objects and closing the file ----------
     queueDestroy(&leftBank);
     queueDestroy(&rightBank);
-    //------------------------------------
+    fclose(fp);
+    //---------------------------------------------------------
     return 0;
 }
