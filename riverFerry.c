@@ -14,7 +14,6 @@ all accumulated traffic.
 char findBank(FILE* fp)
 {
     char c = '.';
-    //int iterations = 0;
     char result = '.';
     while (c != EOF)
     {
@@ -47,7 +46,6 @@ int main(int argc, char** argv)
     {
         exit(1);
     }
-    printf("File opened\n");//
     //--------------------------------------------------------------------------------------
     //Initialization of opaque objects
     QUEUE leftBank = queueInit();
@@ -75,7 +73,6 @@ int main(int argc, char** argv)
     //------------------------------------
     //Apprehending c, the number of test cases:
     fscanf(fp, "%d", &c);
-    printf("%d test cases\n", c);//
     //------------------------------------------
     //for loop reading each of the c test cases
     for (int i = 0; i < c; i++)
