@@ -8,45 +8,25 @@ int BITS_PER_INTEGER = 8 * sizeof(int);
 typedef struct bitFlags
 {
 	int* num;
-	int size, capacity, bytesUsed;
+	int size, capacity;
 }BitFlags;
-int findBytesUsed(int bits)//totally legit function, has been stepped through
+
+Status resize(BitFlags* pBitFlags, int desiredBits)
 {
-	if (bits < 0)
-		return -1;
-	int bytesUsed = 0;
-	if (bits % BITS_PER_INTEGER == 0)
+	printf("resizing...\n");
+	int* biggerData = malloc((desiredBits / BITS_PER_INTEGER + 1) * BYTES_PER_INTEGER);
+	if (!biggerData)
+		return FAILURE;
+	int i = 0;
+	for (; i < pBitFlags->capacity / BITS_PER_INTEGER - 1; i++)
 	{
-		bytesUsed = bits / 8;
+		biggerData[i] = pBitFlags->num[i];
 	}
-	else
+	for (; i < desiredBits / BITS_PER_INTEGER; i++)
 	{
-		while (bits % BITS_PER_INTEGER != 0)
-			bits++;
-		bytesUsed = bits / 8;
+		biggerData[i] = 0;
 	}
-	return bytesUsed;
-}
-int findIntsUsed(int bits)
-{
-	if (bits < 0)
-		return -1;
-	int intsUsed = 0;
-	if (bits % BITS_PER_INTEGER == 0)
-	{
-		intsUsed = bits / BITS_PER_INTEGER;
-	}
-	else
-	{
-		while (bits % BITS_PER_INTEGER != 0)
-			bits++;
-		intsUsed = bits / BITS_PER_INTEGER;
-	}
-	return intsUsed;
-}
-int roundUp(int a, int b)
-{
-	return ((a + b - 1) / b);
+	return SUCCESS;
 }
 //Intentionally leaving out a default init function to force user to at least guess at the size needed.
 //If one WERE to be used it would have the following prototype:
@@ -57,21 +37,29 @@ int roundUp(int a, int b)
 // is assumed to hold size=number_of_bits after the init function runs.
 BIT_FLAGS bit_flags_init_number_of_bits(int number_of_bits)
 {
+	if (number_of_bits < 0)
+	{
+		printf("Only positive numbers are allowed to be arguments to this object.\n");
+		return NULL;
+	}
 	BitFlags* pBitFlags = (BitFlags*)malloc(sizeof(BitFlags));
 	if (pBitFlags == NULL)
 		return NULL;
-	pBitFlags->bytesUsed = findBytesUsed(number_of_bits);
-	pBitFlags->num = (int*)malloc(pBitFlags->bytesUsed);
+	pBitFlags->num = (int*)malloc((number_of_bits / BITS_PER_INTEGER + 1) * BYTES_PER_INTEGER);
 	if (!pBitFlags->num)
 	{
 		printf("There's no space to store that many bits"); exit(1);
 	}
-	for (int i = 0; i < pBitFlags->bytesUsed/BYTES_PER_INTEGER; i++)
+	for (int i = 0; i < number_of_bits/BITS_PER_INTEGER + 1; i++)
 	{
 		pBitFlags->num[i] = 0;
 	}
 	pBitFlags->size = number_of_bits;
-	pBitFlags->capacity = pBitFlags->bytesUsed * 8;
+	pBitFlags->capacity = number_of_bits;
+	while (pBitFlags->capacity % BITS_PER_INTEGER != 0)
+	{
+		pBitFlags->capacity++;
+	}
 	return (BIT_FLAGS)pBitFlags;
 }
 //Precondition: flag_position is a non-negative integer and hBit_flags is a handle to a valid Bit_flags object.
@@ -83,32 +71,23 @@ BIT_FLAGS bit_flags_init_number_of_bits(int number_of_bits)
 // All new flags created in a resize operation (except the one being set) will be set as zero.
 Status bit_flags_set_flag(BIT_FLAGS hBit_flags, int flag_position)
 {
+	if (flag_position < 0)
+	{
+		printf("Only positive numbers are allowed to be arguments to this object.\n");
+		return FAILURE;
+	}
 	if (hBit_flags == NULL) return 0;
 		POINTER_BUILD
 	if (flag_position >= pBitFlags->capacity)//resize protocall//doesn't work
 	{
-		int* biggerData = malloc(findIntsUsed(flag_position + 1) * BYTES_PER_INTEGER);
-		if (!biggerData)
+		if(!resize(pBitFlags, flag_position))
 			return FAILURE;
-		int i = 0;
-		for (; i < pBitFlags->capacity / BITS_PER_INTEGER; i++)
-		{
-			biggerData[i] = pBitFlags->num[i];
-		}
-		for (; i < findIntsUsed(flag_position + 1) / BYTES_PER_INTEGER; i++)
-		{
-			biggerData[i] = 0;
-		}
 	}
-	int index;
-	if (flag_position % BITS_PER_INTEGER == 0)
-		index = findIntsUsed(flag_position);
-	else
-		index = findIntsUsed(flag_position) - 1;
-	int reference = 1;
-	flag_position = (flag_position % BITS_PER_INTEGER);//the position of the flag within the index
-	reference = reference << flag_position;
-	pBitFlags->num[index] = pBitFlags->num[index] | reference;//current problem, crashes
+	int index = flag_position / BITS_PER_INTEGER;
+	flag_position %= BITS_PER_INTEGER;
+	int reference = 1 << flag_position;
+	pBitFlags->num[index] = pBitFlags->num[index] | reference;
+	printf("pBitFlags->num[index] in set_flag: %d index: %d\n", pBitFlags->num[index], index);//
 	return SUCCESS;
 }
 //Precondition: flag_position is a non-negative integer and hBit_flags is a handle to a valid Bit_flags object.
@@ -120,28 +99,18 @@ Status bit_flags_set_flag(BIT_FLAGS hBit_flags, int flag_position)
 // All new flags created in a resize operation will be set as zero.
 Status bit_flags_unset_flag(BIT_FLAGS hBit_flags, int flag_position)
 {
+	if (flag_position < 0)
+	{
+		printf("Only positive numbers are allowed to be arguments to this object.\n");
+		return FAILURE;
+	}
 	if (hBit_flags == NULL) return FAILURE;
 		POINTER_BUILD
 	if (flag_position >= pBitFlags->capacity)//resize protocall//doesn't work
 	{
-		int* biggerData = malloc(findIntsUsed(flag_position + 1) * BYTES_PER_INTEGER);
-		if (!biggerData)
-			return FAILURE;
-		int i = 0;
-		for (; i < pBitFlags->capacity / BITS_PER_INTEGER; i++)
-		{
-			biggerData[i] = pBitFlags->num[i];
-		}
-		for (; i < findIntsUsed(flag_position + 1) / BYTES_PER_INTEGER; i++)
-		{
-			biggerData[i] = 0;
-		}
+		resize(pBitFlags, flag_position + 1);
 	}
-	int index;
-	if (flag_position % BITS_PER_INTEGER == 0)
-		index = findIntsUsed(flag_position);
-	else
-		index = findIntsUsed(flag_position) - 1;
+	int index = flag_position / BITS_PER_INTEGER;
 	int reference = 1;
 	flag_position = (flag_position % BITS_PER_INTEGER);//the position of the flag within the index
 	reference = reference << flag_position;
@@ -152,22 +121,20 @@ Status bit_flags_unset_flag(BIT_FLAGS hBit_flags, int flag_position)
 //Postcondition: returns the value of the flag at index flag_position if it is in bounds or -1 otherwise.
 int bit_flags_check_flag(BIT_FLAGS hBit_flags, int flag_position)
 {
+	if (flag_position < 0)
+	{
+		printf("Only positive numbers are allowed to be arguments to this object.\n");
+		return NULL;
+	}
 	printf("b=%d, ", flag_position);//
 	if (hBit_flags == NULL) {return 0;}
 	POINTER_BUILD
-	/*if ((flag_position < 0) || (flag_position > pBitFlags->size))
-	{
-		printf("Flag position out of bounds\n"); return -1;
-	}*/
-	int index;
-	if (flag_position % BITS_PER_INTEGER == 0)
-		index = findIntsUsed(flag_position);
-	else
-		index = findIntsUsed(flag_position) - 1;
+	int index = flag_position / BITS_PER_INTEGER;
 	flag_position %= BITS_PER_INTEGER;
 	int reference = 1 << flag_position;
 	printf("r=%d, i=%d, ", reference, index);//
-	if ((pBitFlags->num[index]) & reference)//
+	printf("pBitFlags->num[index] in check_flag: %d index: %d\n", pBitFlags->num[index], index);//
+	if ((pBitFlags->num[index]) & reference)
 		return 1;
 	return 0;
 }
