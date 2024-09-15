@@ -18,13 +18,21 @@ Status resize(BitFlags* pBitFlags, int desiredBits)
 	if (!biggerData)
 		return FAILURE;
 	int i = 0;
-	for (; i < pBitFlags->capacity / BITS_PER_INTEGER - 1; i++)
+	for (; i < pBitFlags->capacity / BITS_PER_INTEGER; i++)
 	{
 		biggerData[i] = pBitFlags->num[i];
 	}
-	for (; i < desiredBits / BITS_PER_INTEGER; i++)
+	for (; i < desiredBits / BITS_PER_INTEGER + 1; i++)
 	{
 		biggerData[i] = 0;
+	}
+	free(pBitFlags->num);
+	pBitFlags->num = biggerData;
+	pBitFlags->size = desiredBits;
+	pBitFlags->capacity = desiredBits;
+	while (pBitFlags->capacity % BITS_PER_INTEGER != 0)
+	{
+		pBitFlags->capacity++;
 	}
 	return SUCCESS;
 }
@@ -78,16 +86,15 @@ Status bit_flags_set_flag(BIT_FLAGS hBit_flags, int flag_position)
 	}
 	if (hBit_flags == NULL) return 0;
 		POINTER_BUILD
-	if (flag_position >= pBitFlags->capacity)//resize protocall//doesn't work
+	if (flag_position >= pBitFlags->capacity)
 	{
-		if(!resize(pBitFlags, flag_position))
+		if(!resize(pBitFlags, flag_position + 1))
 			return FAILURE;
 	}
 	int index = flag_position / BITS_PER_INTEGER;
 	flag_position %= BITS_PER_INTEGER;
 	int reference = 1 << flag_position;
 	pBitFlags->num[index] = pBitFlags->num[index] | reference;
-	printf("pBitFlags->num[index] in set_flag: %d index: %d\n", pBitFlags->num[index], index);//
 	return SUCCESS;
 }
 //Precondition: flag_position is a non-negative integer and hBit_flags is a handle to a valid Bit_flags object.
@@ -106,9 +113,13 @@ Status bit_flags_unset_flag(BIT_FLAGS hBit_flags, int flag_position)
 	}
 	if (hBit_flags == NULL) return FAILURE;
 		POINTER_BUILD
-	if (flag_position >= pBitFlags->capacity)//resize protocall//doesn't work
+	if (flag_position >= pBitFlags->capacity)
 	{
-		resize(pBitFlags, flag_position + 1);
+		if (!resize(pBitFlags, flag_position + 1))
+		{
+			printf("Resizing failed when being called from the unset function.\n");
+			return FAILURE;
+		}
 	}
 	int index = flag_position / BITS_PER_INTEGER;
 	int reference = 1;
@@ -124,16 +135,17 @@ int bit_flags_check_flag(BIT_FLAGS hBit_flags, int flag_position)
 	if (flag_position < 0)
 	{
 		printf("Only positive numbers are allowed to be arguments to this object.\n");
-		return NULL;
+		return -1;
 	}
-	printf("b=%d, ", flag_position);//
 	if (hBit_flags == NULL) {return 0;}
 	POINTER_BUILD
+	if (flag_position >= pBitFlags->size)
+	{
+		return -1;
+	}
 	int index = flag_position / BITS_PER_INTEGER;
 	flag_position %= BITS_PER_INTEGER;
 	int reference = 1 << flag_position;
-	printf("r=%d, i=%d, ", reference, index);//
-	printf("pBitFlags->num[index] in check_flag: %d index: %d\n", pBitFlags->num[index], index);//
 	if ((pBitFlags->num[index]) & reference)
 		return 1;
 	return 0;
@@ -168,4 +180,24 @@ void bit_flags_destroy(BIT_FLAGS* phBit_flags)
 	free(pBitFlags->num);
 	free(pBitFlags);
 	*phBit_flags = NULL;
+}
+void bit_flags_print(BIT_FLAGS hBit_flags)
+{
+	if (hBit_flags == NULL) { return;}
+	POINTER_BUILD
+	printf("size: %d capacity: %d\n", pBitFlags->size, pBitFlags->capacity);
+	int j;
+	for (int i = 0; i < pBitFlags->capacity; i++)
+	{
+		j = bit_flags_check_flag(hBit_flags, i);
+		if (j > -1)
+			printf("%d", j);
+		else
+			printf("0");
+		if (i != 0 && (i + 1) % BITS_PER_INTEGER == 0)
+			printf("\n");
+		else if (i != 0 && (i + 1) % 4 == 0)
+			printf(" ");
+	}
+	printf("\n");
 }
