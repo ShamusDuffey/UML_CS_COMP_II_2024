@@ -1,3 +1,11 @@
+/**********************************************************************
+Program: Number Filter
+Author: Shamus Duffey
+Date: 9/21/2024
+Time spent: 1 month
+Purpose: This program takes a list of integers 2000000000 entries long and outputs a sorted list with the duplicates removed.
+It uses a custom bitflags object to do so.
+***********************************************************************/
 #ifndef BITFLAGS
 #define BITFLAGS
 typedef enum status { FAILURE, SUCCESS }Status;
